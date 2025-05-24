@@ -113,10 +113,10 @@ export const DynamicSwaggerUI = ({ apiId }: DynamicSwaggerUIProps) => {
       const params = parameterValues[endpointId] || {};
       const requestBody = requestBodies[endpointId];
       
-      const finalPath = path;
+      let finalPath = path; // Changed const to let
       const queryParams = new URLSearchParams();
       if (operation.parameters) {
-        operation.parameters.forEach(param => {
+        operation.parameters.forEach((param: any) => {
           if (param.in === 'query' && params[param.name] !== undefined) {
             queryParams.append(param.name, params[param.name]);
           }
