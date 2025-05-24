@@ -109,6 +109,21 @@ export const SwaggerUI = ({ apiId }: SwaggerUIProps) => {
     }
   };
 
+  const executeRequest = async (endpoint: any) => {
+    // Mock API call simulation
+    console.log(`Executing ${endpoint.method} ${endpoint.path}`);
+    
+    // Simulate API response
+    setTimeout(() => {
+      const mockResponse = {
+        status: 200,
+        data: `Mock response for ${endpoint.method} ${endpoint.path}`,
+        timestamp: new Date().toISOString()
+      };
+      console.log("API Response:", mockResponse);
+    }, 1000);
+  };
+
   return (
     <div className="space-y-4">
       {endpoints.map((endpoint, index) => {
@@ -195,7 +210,7 @@ export const SwaggerUI = ({ apiId }: SwaggerUIProps) => {
                             >
                               {code}
                             </Badge>
-                            <span className="text-sm">{description}</span>
+                            <span className="text-sm">{description as string}</span>
                           </div>
                         ))}
                       </div>
@@ -217,7 +232,10 @@ export const SwaggerUI = ({ apiId }: SwaggerUIProps) => {
                               />
                             </div>
                           ))}
-                          <Button className="w-full mt-4">
+                          <Button 
+                            className="w-full mt-4"
+                            onClick={() => executeRequest(endpoint)}
+                          >
                             <Play className="h-4 w-4 mr-2" />
                             Execute Request
                           </Button>
