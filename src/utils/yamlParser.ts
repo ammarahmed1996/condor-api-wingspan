@@ -62,39 +62,40 @@ export const parseYamlSpec = (yamlContent: string): OpenAPISpec => {
 
 export const makeApiCall = async (
   baseUrl: string,
-  path: string,
+  path: string, // This path should now include query parameters if any
   method: string,
-  parameters: Record<string, any> = {},
+  _parameters: Record<string, any> = {}, // This parameter is no longer used for query params here
   requestBody?: any,
-  headers: Record<string, string> = {}
+  customHeaders: Record<string, string> = {} // Added customHeaders
 ) => {
+  // The `path` received here is expected to be the full path including any query strings.
+  // baseUrl might be like "https://api.example.com/v1" and path might be "/users?id=123"
+  // Or baseUrl might be "https://api.example.com" and path might be "/v1/users?id=123"
   const url = new URL(path, baseUrl);
-  
-  // Add query parameters for GET requests
-  if (method.toLowerCase() === 'get' && parameters) {
-    Object.entries(parameters).forEach(([key, value]) => {
-      if (value !== undefined && value !== '') {
-        url.searchParams.append(key, value);
-      }
-    });
-  }
 
   const requestOptions: RequestInit = {
     method: method.toUpperCase(),
     headers: {
-      'Content-Type': 'application/json',
-      ...headers,
+      'Content-Type': 'application/json', // Default, can be overridden by customHeaders
+      ...customHeaders, // Merge custom headers
     },
   };
 
-  // Add request body for POST, PUT, PATCH requests
-  if (requestBody && ['post', 'put', 'patch'].includes(method.toLowerCase())) {
+  if (requestBody && ['POST', 'PUT', 'PATCH'].includes(method.toUpperCase())) {
     requestOptions.body = JSON.stringify(requestBody);
   }
 
   try {
     const response = await fetch(url.toString(), requestOptions);
-    const data = await response.json();
+    
+    // Try to parse as JSON, but handle cases where it might not be JSON
+    let data;
+    const contentType = response.headers.get("content-type");
+    if (contentType && contentType.includes("application/json")) {
+      data = await response.json();
+    } else {
+      data = await response.text(); // Fallback to text if not JSON
+    }
     
     return {
       status: response.status,
@@ -104,6 +105,16 @@ export const makeApiCall = async (
     };
   } catch (error) {
     console.error('API call failed:', error);
-    throw error;
+    // Construct a more informative error object for the UI
+    if (error instanceof Error) {
+        return {
+            status: 'NetworkError',
+            statusText: 'Failed to fetch',
+            data: { message: error.message, name: error.name, stack: error.stack },
+            headers: {},
+        };
+    }
+    throw error; // Re-throw if it's not a standard Error object
   }
 };
+
