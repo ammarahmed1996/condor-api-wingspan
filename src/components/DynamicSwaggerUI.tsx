@@ -1,4 +1,3 @@
-
 import { useState, useRef } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -17,6 +16,7 @@ export const DynamicSwaggerUI = ({ apiId }: DynamicSwaggerUIProps) => {
   const [spec, setSpec] = useState<OpenAPISpec | null>(null);
   const [yamlInput, setYamlInput] = useState<string>("");
   const [expandedSections, setExpandedSections] = useState<Set<string>>(new Set());
+  const [expandedSchemas, setExpandedSchemas] = useState<Set<string>>(new Set());
   const [parameterValues, setParameterValues] = useState<Record<string, Record<string, any>>>({});
   const [requestBodies, setRequestBodies] = useState<Record<string, any>>({});
   const [responses, setResponses] = useState<Record<string, any>>({});
@@ -62,6 +62,16 @@ export const DynamicSwaggerUI = ({ apiId }: DynamicSwaggerUIProps) => {
       newExpanded.add(sectionId);
     }
     setExpandedSections(newExpanded);
+  };
+
+  const toggleSchema = (schemaName: string) => {
+    const newExpanded = new Set(expandedSchemas);
+    if (newExpanded.has(schemaName)) {
+      newExpanded.delete(schemaName);
+    } else {
+      newExpanded.add(schemaName);
+    }
+    setExpandedSchemas(newExpanded);
   };
 
   const getMethodColor = (method: string) => {
@@ -123,6 +133,39 @@ export const DynamicSwaggerUI = ({ apiId }: DynamicSwaggerUIProps) => {
     }
   };
 
+  const renderSchemaProperty = (property: any, propertyName: string, level: number = 0) => {
+    const indent = level * 20;
+    
+    return (
+      <div key={propertyName} style={{ marginLeft: `${indent}px` }} className="py-2 border-b border-gray-100 last:border-b-0">
+        <div className="flex items-center space-x-2">
+          <code className="text-sm font-mono text-blue-600">{propertyName}</code>
+          <Badge variant="outline" className="text-xs">
+            {property.type || 'object'}
+          </Badge>
+          {property.required && (
+            <Badge variant="destructive" className="text-xs">Required</Badge>
+          )}
+        </div>
+        {property.description && (
+          <p className="text-xs text-gray-600 mt-1">{property.description}</p>
+        )}
+        {property.example && (
+          <code className="text-xs bg-gray-100 px-1 py-0.5 rounded mt-1 block">
+            Example: {JSON.stringify(property.example)}
+          </code>
+        )}
+        {property.properties && (
+          <div className="mt-2">
+            {Object.entries(property.properties).map(([propName, propData]) =>
+              renderSchemaProperty(propData as any, propName, level + 1)
+            )}
+          </div>
+        )}
+      </div>
+    );
+  };
+
   if (!spec) {
     return (
       <div className="space-y-6">
@@ -182,6 +225,91 @@ export const DynamicSwaggerUI = ({ apiId }: DynamicSwaggerUIProps) => {
         </CardHeader>
       </Card>
 
+      {/* Schemas Section */}
+      {spec.components?.schemas && (
+        <Card>
+          <CardHeader>
+            <CardTitle>Schemas</CardTitle>
+            <p className="text-gray-600">Data models and schema definitions</p>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-4">
+              {Object.entries(spec.components.schemas).map(([schemaName, schemaData]) => {
+                const isExpanded = expandedSchemas.has(schemaName);
+                
+                return (
+                  <Card key={schemaName} className="border">
+                    <CardHeader 
+                      className="cursor-pointer hover:bg-gray-50 py-3"
+                      onClick={() => toggleSchema(schemaName)}
+                    >
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center space-x-3">
+                          <code className="text-lg font-mono">{schemaName}</code>
+                          <Badge variant="secondary">Schema</Badge>
+                        </div>
+                        {isExpanded ? (
+                          <ChevronDown className="h-5 w-5" />
+                        ) : (
+                          <ChevronRight className="h-5 w-5" />
+                        )}
+                      </div>
+                    </CardHeader>
+
+                    {isExpanded && (
+                      <CardContent>
+                        <div className="space-y-4">
+                          {(schemaData as any).description && (
+                            <p className="text-gray-600">{(schemaData as any).description}</p>
+                          )}
+                          
+                          <Tabs defaultValue="properties" className="w-full">
+                            <TabsList>
+                              <TabsTrigger value="properties">Properties</TabsTrigger>
+                              <TabsTrigger value="example">Example</TabsTrigger>
+                              <TabsTrigger value="raw">Raw Schema</TabsTrigger>
+                            </TabsList>
+
+                            <TabsContent value="properties" className="space-y-2">
+                              {(schemaData as any).properties ? (
+                                <div className="border rounded-lg p-4">
+                                  {Object.entries((schemaData as any).properties).map(([propName, propData]) =>
+                                    renderSchemaProperty(propData as any, propName)
+                                  )}
+                                </div>
+                              ) : (
+                                <p className="text-gray-500 text-sm">No properties defined</p>
+                              )}
+                            </TabsContent>
+
+                            <TabsContent value="example" className="space-y-2">
+                              {(schemaData as any).example ? (
+                                <div className="bg-gray-900 text-green-400 p-3 rounded text-sm overflow-x-auto">
+                                  <pre>{JSON.stringify((schemaData as any).example, null, 2)}</pre>
+                                </div>
+                              ) : (
+                                <p className="text-gray-500 text-sm">No example provided</p>
+                              )}
+                            </TabsContent>
+
+                            <TabsContent value="raw" className="space-y-2">
+                              <div className="bg-gray-900 text-green-400 p-3 rounded text-sm overflow-x-auto">
+                                <pre>{JSON.stringify(schemaData, null, 2)}</pre>
+                              </div>
+                            </TabsContent>
+                          </Tabs>
+                        </div>
+                      </CardContent>
+                    )}
+                  </Card>
+                );
+              })}
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Existing endpoints section */}
       {Object.entries(spec.paths).map(([path, pathItem]) =>
         Object.entries(pathItem).map(([method, operation]) => {
           const endpointId = `${method}-${path}`;
