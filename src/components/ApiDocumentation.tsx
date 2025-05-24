@@ -3,7 +3,7 @@ import { ArrowLeft, ExternalLink, Code, BookOpen } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { SwaggerUI } from "@/components/SwaggerUI";
+import { DynamicSwaggerUI } from "@/components/DynamicSwaggerUI";
 import { CodeExample } from "@/components/CodeExample";
 
 interface ApiDocumentationProps {
@@ -106,14 +106,14 @@ export const ApiDocumentation = ({ apiId, onBack }: ApiDocumentationProps) => {
             <CardHeader>
               <CardTitle className="flex items-center space-x-2">
                 <Code className="h-5 w-5" />
-                <span>Interactive API Documentation</span>
+                <span>Dynamic Swagger UI</span>
               </CardTitle>
               <CardDescription>
-                Explore and test the API endpoints directly in your browser
+                Import your OpenAPI/Swagger YAML specification and test APIs directly
               </CardDescription>
             </CardHeader>
             <CardContent>
-              <SwaggerUI apiId={apiId} />
+              <DynamicSwaggerUI apiId={apiId} />
             </CardContent>
           </Card>
         </TabsContent>
